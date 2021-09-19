@@ -1,3 +1,4 @@
 {
-    "LAST_UPDATE": "Last update: "
+    "LAST_UPDATE": "Last update {age} minutes ago",
+    "SUMMARY": "{duration} via {via} ({distance})"
 }

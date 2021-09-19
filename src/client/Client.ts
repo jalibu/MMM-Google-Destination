@@ -7,19 +7,21 @@ declare const moment: any
 
 Module.register<Config>('MMM-Google-Destination', {
   defaults: {
-    updateIntervalInSeconds: 60,
+    updateIntervalInSeconds: 300,
     apiKey: null,
     height: 400,
     width: 400,
+    expectedDurationInMinutes: null,
     start: 'Heidelberg',
     destination: 'Mainz',
+    routeColor: '#fff',
     timeFormat: config.timeFormat || 24
   },
 
   _state: {
     directionsService: null,
+    directionsRenderer0: null,
     directionsRenderer1: null,
-    directionsRenderer2: null,
     lastUpdate: null
   },
 
@@ -79,82 +81,99 @@ Module.register<Config>('MMM-Google-Destination', {
     })
 
     this._state.directionsService = new google.maps.DirectionsService()
-    this._state.directionsRenderer1 = new google.maps.DirectionsRenderer({
+    this._state.directionsRenderer0 = new google.maps.DirectionsRenderer({
       suppressMarkers: true,
       polylineOptions: {
         strokeColor: '#fff',
+        strokeOpacity: 0.7,
         strokeWeight: 7
+      }
+    })
+    this._state.directionsRenderer0.setMap(map)
+
+    this._state.directionsRenderer1 = new google.maps.DirectionsRenderer({
+      suppressMarkers: true,
+      polylineOptions: {
+        strokeColor: '#aaa',
+        strokeOpacity: 0.5,
+        strokeWeight: 5
       }
     })
     this._state.directionsRenderer1.setMap(map)
 
-    this._state.directionsRenderer2 = new google.maps.DirectionsRenderer({
-      suppressMarkers: true,
-      polylineOptions: {
-        strokeColor: '#aaa',
-        strokeWeight: 5
-      }
-    })
-    this._state.directionsRenderer2.setMap(map)
-
     this.scheduleUpdate()
   },
 
+  getStrokeColor(response: any, index: number) {
+    if(this.config.expectedDurationInMinutes){
+      const value =
+      (response.routes[index].legs[0].duration.value - this.config.expectedDurationInMinutes) / this.config.expectedDurationInMinutes
+    var hue = ((1 - value) * 120).toString(10)
+
+    return ['hsl(', hue, ',100%,50%)'].join('')
+    } else {
+      return this.config.routeColor
+    }
+
+  },
+
+  setRouteSummary(response: any, index: number) {
+    let route = response.routes[index]
+
+    document.getElementById(`destination-summary-${this.identifier}-${index}`).innerHTML = this.translate('SUMMARY', {
+      duration: route.legs[0].duration.text,
+      via: route.summary,
+      distance: route.legs[0].distance.text
+    })
+  },
+
   async calculateAndDisplayRoute() {
-    try {
-      const response = await this._state.directionsService.route({
-        origin: {
-          query: this.config.start
-        },
-        destination: {
-          query: this.config.destination
-        },
-        travelMode: google.maps.TravelMode.DRIVING
-      })
-  
-      if (response.status === 'OK') {
-        this._state.directionsRenderer1.setDirections(response)
-        this._state.directionsRenderer1.setRouteIndex(1)
-        this._state.directionsRenderer2.setDirections(response)
+    if (!this._state.lastUpdate || Date.now() - this._state.lastUpdate > this.config.updateIntervalInSeconds * 1000) {
+      try {
+        const response = await this._state.directionsService.route({
+          provideRouteAlternatives: true,
+          origin: {
+            query: this.config.start
+          },
+          destination: {
+            query: this.config.destination
+          },
+          travelMode: google.maps.TravelMode.DRIVING
+        })
 
-        // Hide error
-        document.getElementById('destination-error-' + this.identifier).setAttribute('style', 'display: none;')
+        if (response.status === 'OK') {
+          // Hide error
+          document.getElementById('destination-error-' + this.identifier).setAttribute('style', 'display: none;')
 
-        let route = response.routes[0]
-        document.getElementById(
-          'destination-summary-' + this.identifier + '-1'
-        ).innerHTML = `${route.legs[0].duration.text} via ${route.summary} (${route.legs[0].distance.text})`
+          this._state.directionsRenderer0.setDirections(response)
+          this._state.directionsRenderer0.polylineOptions.strokeColor = this.getStrokeColor(response, 0)
+          this._state.directionsRenderer0.setRouteIndex(1)
+          this.setRouteSummary(response, 0)
 
-        if (response.routes.length > 1) {
-          let route = response.routes[1]
-          document.getElementById(
-            'destination-summary-' + this.identifier + '-2'
-          ).innerHTML = `${route.legs[0].duration.text} via ${route.summary} (${route.legs[0].distance.text})`
-          document.getElementById('destination-summary-' + this.identifier + '-2').setAttribute('style', '')
+          this._state.directionsRenderer1.setDirections(response)
+          this._state.directionsRenderer1.polylineOptions.strokeColor = this.getStrokeColor(response, 1)
+          this.setRouteSummary(response, 1)
+
+          this._state.lastUpdate = Date.now()
         } else {
-          document
-            .getElementById('destination-summary-' + this.identifier + '-2')
-            .setAttribute('style', 'display: none;')
+          throw Error(status)
         }
-
-        const lastUpdate = moment(Date.now())
-        
-        document.getElementById('destination-lastUpdate-' + this.identifier).innerHTML = `${this.translate(
-          'LAST_UPDATE'
-        )}${lastUpdate.format(this._state.hourSymbol + ':mm')}`
-      } else {
-        throw Error(status)
+      } catch (err) {
+        const errorTime = moment(Date.now())
+        const errorElement = document.getElementById('destination-error-' + this.identifier)
+        errorElement.innerHTML = `Error: ${err.message} (${errorTime.format(this._state.hourSymbol + ':mm')})`
+        errorElement.setAttribute('style', '')
       }
-    } catch (err) {
-      const errorTime = moment(Date.now())
-      const errorElement = document.getElementById('destination-error-' + this.identifier)
-      errorElement.innerHTML = `Error: ${err.message} (${errorTime.format(this._state.hourSymbol + ':mm')})`
-      errorElement.setAttribute('style', '')
+    }
+    const lastUpdateElement = document.getElementById('destination-lastUpdate-' + this.identifier)
+    if (lastUpdateElement && this._state.lastUpdate) {
+      const age = moment(Date.now() - this._state.lastUpdate)
+      lastUpdateElement.innerHTML = this.translate('LAST_UPDATE', { age: age.format('m') })
     }
   },
 
   scheduleUpdate() {
     this.calculateAndDisplayRoute()
-    setInterval(this.calculateAndDisplayRoute.bind(this), this.config.updateIntervalInSeconds * 1000)
+    setInterval(this.calculateAndDisplayRoute.bind(this), 30 * 1000)
   }
 })

@@ -6,4 +6,6 @@ export type Config = {
   start: string
   destination: string
   timeFormat: number
+  expectedDurationInMinutes: number
+  routeColor: string
 }
