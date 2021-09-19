@@ -1,0 +1,17 @@
+.destination-map {
+  height: 100%;
+}
+
+.destination-summary {
+  font-size: 0.6em;
+}
+
+.destination-lastUpdate {
+  font-size: 0.5em;
+}
+
+.destination-error {
+  color: red;
+  font-size: 0.6em;
+  line-height: 1em;
+}
