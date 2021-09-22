@@ -28,19 +28,23 @@ tbd
    git clone https://github.com/jalibu/MMM-Google-Destination.git
    ```
 
-2. Add the module configuration into the `MagicMirror/config/config.js` file (sample configuration):
+2. Get your [Google Maps API Key](https://developers.google.com/maps/documentation/javascript/get-api-key).
+
+3. Add the module configuration into the `MagicMirror/config/config.js` file (sample configuration):
 
    ```javascript
    {
    	module: "MMM-Google-Destination",
    	position: "top_left",
    	config: {
-   	updateIntervalInSeconds: 60,
-   	apiKey: null,
-   	height: 400,
-   	width: 400,
-   	start: 'Heidelberg',
-   	destination: 'Mainz',
+		updateIntervalInSeconds: 60,
+		apiKey: "YOUR_API_KEY",
+		height: 400,
+		width: 400,
+		start: 'Heidelberg',
+		destination: 'Mainz',
+		expectedDurationInMinutes: null,
+		routeColor: '#0088FF'
    	}
    }
    ```
@@ -62,4 +66,5 @@ Contribution for this module is welcome!
 ## Thanks to
 
 -
+
 # MMM-Google-Destination

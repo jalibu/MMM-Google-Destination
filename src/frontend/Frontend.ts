@@ -18,7 +18,7 @@ Module.register<Config>('MMM-Google-Destination', {
     timeFormat: config.timeFormat || 24
   },
 
-  _state: {
+  state: {
     directionsService: null,
     directionsRenderer0: null,
     directionsRenderer1: null,
@@ -52,23 +52,22 @@ Module.register<Config>('MMM-Google-Destination', {
   },
 
   start() {
-    const self = this
     const script = document.createElement('script')
     script.type = 'text/javascript'
     script.src = `https://maps.googleapis.com/maps/api/js?key=${this.config.apiKey}`
     script.async = true
 
     script.onload = () => {
-      self.initGoogleDestinationMap()
+      this.initGoogleDestinationMap()
     }
 
-    this._state.hourSymbol = this.config.timeFormat === 24 ? 'HH' : 'h'
+    this.state.hourSymbol = this.config.timeFormat === 24 ? 'HH' : 'h'
 
     document.head.appendChild(script)
   },
 
   initGoogleDestinationMap() {
-    const map = new google.maps.Map(document.getElementById('destination-map-' + this.identifier), {
+    const map = new google.maps.Map(document.getElementById(`destination-map-${this.identifier}`), {
       styles: MapStyle,
       keyboardShortcuts: false,
       zoomControl: false,
@@ -80,8 +79,8 @@ Module.register<Config>('MMM-Google-Destination', {
       fullscreenControl: false
     })
 
-    this._state.directionsService = new google.maps.DirectionsService()
-    this._state.directionsRenderer0 = new google.maps.DirectionsRenderer({
+    this.state.directionsService = new google.maps.DirectionsService()
+    this.state.directionsRenderer0 = new google.maps.DirectionsRenderer({
       suppressMarkers: true,
       polylineOptions: {
         strokeColor: '#fff',
@@ -89,9 +88,9 @@ Module.register<Config>('MMM-Google-Destination', {
         strokeWeight: 7
       }
     })
-    this._state.directionsRenderer0.setMap(map)
+    this.state.directionsRenderer0.setMap(map)
 
-    this._state.directionsRenderer1 = new google.maps.DirectionsRenderer({
+    this.state.directionsRenderer1 = new google.maps.DirectionsRenderer({
       suppressMarkers: true,
       polylineOptions: {
         strokeColor: '#aaa',
@@ -99,26 +98,25 @@ Module.register<Config>('MMM-Google-Destination', {
         strokeWeight: 5
       }
     })
-    this._state.directionsRenderer1.setMap(map)
+    this.state.directionsRenderer1.setMap(map)
 
     this.scheduleUpdate()
   },
 
   getStrokeColor(response: any, index: number) {
-    if(this.config.expectedDurationInMinutes){
+    if (this.config.expectedDurationInMinutes) {
       const value =
-      (response.routes[index].legs[0].duration.value - this.config.expectedDurationInMinutes) / this.config.expectedDurationInMinutes
-    var hue = ((1 - value) * 120).toString(10)
+        (response.routes[index].legs[0].duration.value - this.config.expectedDurationInMinutes) /
+        this.config.expectedDurationInMinutes
+      const hue = ((1 - value) * 120).toString(10)
 
-    return ['hsl(', hue, ',100%,50%)'].join('')
-    } else {
-      return this.config.routeColor
+      return ['hsl(', hue, ',100%,50%)'].join('')
     }
-
+    return this.config.routeColor
   },
 
   setRouteSummary(response: any, index: number) {
-    let route = response.routes[index]
+    const route = response.routes[index]
 
     document.getElementById(`destination-summary-${this.identifier}-${index}`).innerHTML = this.translate('SUMMARY', {
       duration: route.legs[0].duration.text,
@@ -128,9 +126,9 @@ Module.register<Config>('MMM-Google-Destination', {
   },
 
   async calculateAndDisplayRoute() {
-    if (!this._state.lastUpdate || Date.now() - this._state.lastUpdate > this.config.updateIntervalInSeconds * 1000) {
+    if (!this.state.lastUpdate || Date.now() - this.state.lastUpdate > this.config.updateIntervalInSeconds * 1000) {
       try {
-        const response = await this._state.directionsService.route({
+        const response = await this.state.directionsService.route({
           provideRouteAlternatives: true,
           origin: {
             query: this.config.start
@@ -143,31 +141,31 @@ Module.register<Config>('MMM-Google-Destination', {
 
         if (response.status === 'OK') {
           // Hide error
-          document.getElementById('destination-error-' + this.identifier).setAttribute('style', 'display: none;')
+          document.getElementById(`destination-error-${this.identifier}`).setAttribute('style', 'display: none;')
 
-          this._state.directionsRenderer0.setDirections(response)
-          this._state.directionsRenderer0.polylineOptions.strokeColor = this.getStrokeColor(response, 0)
-          this._state.directionsRenderer0.setRouteIndex(1)
+          this.state.directionsRenderer0.setDirections(response)
+          this.state.directionsRenderer0.polylineOptions.strokeColor = this.getStrokeColor(response, 0)
+          this.state.directionsRenderer0.setRouteIndex(1)
           this.setRouteSummary(response, 0)
 
-          this._state.directionsRenderer1.setDirections(response)
-          this._state.directionsRenderer1.polylineOptions.strokeColor = this.getStrokeColor(response, 1)
+          this.state.directionsRenderer1.setDirections(response)
+          this.state.directionsRenderer1.polylineOptions.strokeColor = this.getStrokeColor(response, 1)
           this.setRouteSummary(response, 1)
 
-          this._state.lastUpdate = Date.now()
+          this.state.lastUpdate = Date.now()
         } else {
-          throw Error(status)
+          throw Error(response.status)
         }
       } catch (err) {
         const errorTime = moment(Date.now())
-        const errorElement = document.getElementById('destination-error-' + this.identifier)
-        errorElement.innerHTML = `Error: ${err.message} (${errorTime.format(this._state.hourSymbol + ':mm')})`
+        const errorElement = document.getElementById(`destination-error-${this.identifier}`)
+        errorElement.innerHTML = `Error: ${err.message} (${errorTime.format(`${this.state.hourSymbol}:mm`)})`
         errorElement.setAttribute('style', '')
       }
     }
-    const lastUpdateElement = document.getElementById('destination-lastUpdate-' + this.identifier)
-    if (lastUpdateElement && this._state.lastUpdate) {
-      const age = moment(Date.now() - this._state.lastUpdate)
+    const lastUpdateElement = document.getElementById(`destination-lastUpdate-${this.identifier}`)
+    if (lastUpdateElement && this.state.lastUpdate) {
+      const age = moment(Date.now() - this.state.lastUpdate)
       lastUpdateElement.innerHTML = this.translate('LAST_UPDATE', { age: age.format('m') })
     }
   },

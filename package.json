@@ -1,6 +1,6 @@
 {
   "name": "mmm-google-destination",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A module to show the quickest route to a specified destination for the MagicMirror² platform.",
   "main": "MMM-Google-Destination.js",
   "repository": {
