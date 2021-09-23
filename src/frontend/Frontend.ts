@@ -2,7 +2,9 @@ import { Config } from '../types/Config'
 import { MapStyle } from './MapStyle'
 
 // Global or injected variable declarations
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const google: any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const moment: any
 
 Module.register<Config>('MMM-Google-Destination', {
@@ -112,6 +114,7 @@ Module.register<Config>('MMM-Google-Destination', {
 
       return ['hsl(', hue, ',100%,50%)'].join('')
     }
+
     return this.config.routeColor
   },
 
